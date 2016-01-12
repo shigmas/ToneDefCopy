@@ -8,10 +8,10 @@
 
 import Foundation
 
-public enum AccidentalType {
+public enum AccidentalType: Int {
     case FlatType
-    case NaturalType
     case SharpType
+    case NaturalType
 }
 
 public enum StaffLineDirection {
@@ -71,6 +71,10 @@ public class FrequencyConverter {
     let staffInterval: CGFloat
     let staffSpace: CGFloat
     let staffBottom: CGFloat
+
+    // for the enharmonic pairs, we set the mode so we know which one to
+    // return of the flat and sharp. Sharp by default
+    var mode: AccidentalType = .SharpType
 
     init(let tablePath: String, let staffInterval: CGFloat,
         let staffSpace: CGFloat, let staffBottom: CGFloat) {
@@ -133,9 +137,11 @@ public class FrequencyConverter {
         return noteToPosition(noteIndex)
     }
 
+    // This should take a position, and we just calculate it from how far we
+    // are from the stave
     func _getNumExtraStaves(index: Int) -> (Int, StaffLineDirection) {
         let lowerBound = getIndexForName("G2")
-        let upperBound = getIndexForName("G5")
+        let upperBound = getIndexForName("G#5/Ab5")
         var direction: StaffLineDirection = .Up
         var extra = 0
         if index < lowerBound {
@@ -143,7 +149,7 @@ public class FrequencyConverter {
             let diff = lowerBound - index
             if diff < 3 {
                 extra = 0
-            } else if diff < 5 {
+            } else if diff < 7 {
                 extra = 1
             } else {
                 extra = 2
@@ -155,8 +161,10 @@ public class FrequencyConverter {
                 extra = 0
             } else if diff < 4 {
                 extra = 1
-            } else {
+            } else if diff < 8 {
                 extra = 2
+            } else {
+                extra = 3
             }
         }
 
@@ -169,7 +177,7 @@ public class FrequencyConverter {
             return (nil, nil)
         }
         
-        // position starts at C2 (two octaves below middle C
+        // position starts at C2 (two octaves below middle C)
         let startIndex = getIndexForName("C2")
         if (startIndex < 0) {
             return (nil, nil)
@@ -201,52 +209,77 @@ public class FrequencyConverter {
             // C
             needsStave = evenOctave
         } else if octaveOffset == 1 {
-            // C#
-            needsStave = evenOctave
-            accidentalType = .SharpType
-            needsStave = evenOctave
+            // C#/Db
+            accidentalType = self.mode
+            if self.mode == .FlatType {
+                needsStave = !evenOctave
+                position += increment
+            } else {
+                needsStave = evenOctave
+            }
         } else if octaveOffset == 2 {
             // D
             needsStave = !evenOctave
             position += increment
         } else if octaveOffset == 3 {
-            // D#
-            needsStave = !evenOctave
+            // D#/Eb
+            accidentalType = self.mode
             position += increment
-            accidentalType = .SharpType
+            if self.mode == .FlatType {
+                position += increment
+                needsStave = evenOctave
+            } else {
+                needsStave = !evenOctave
+            }
         } else if octaveOffset == 4 {
             // E
-            needsStave = !evenOctave
+            needsStave = evenOctave
             position += increment * 2.0
         } else if octaveOffset == 5 {
             // F
             needsStave = !evenOctave
             position += increment * 3.0
         } else if octaveOffset == 6 {
-            // F#
-            needsStave = !evenOctave
+            // F#/Gb
+            accidentalType = self.mode
             position += increment * 3.0
-            accidentalType = .SharpType
+            if self.mode == .FlatType {
+                position += increment
+                needsStave = evenOctave
+            } else {
+                needsStave = !evenOctave
+            }
         } else if octaveOffset == 7 {
             // G
             needsStave = evenOctave
             position += increment * 4.0
         } else if octaveOffset == 8 {
-            // G#
-            needsStave = evenOctave
+            // G#/Ab
+            accidentalType = self.mode
             position += increment * 4.0
-            accidentalType = .SharpType
+            if self.mode == .FlatType {
+                position += increment
+                needsStave = !evenOctave
+            } else {
+                needsStave = evenOctave
+            }
         } else if octaveOffset == 9 {
             // A
             needsStave = !evenOctave
             position += increment * 5.0
         } else if octaveOffset == 10 {
-            // A# 
-            needsStave = !evenOctave
+            // A#/Bb
+            accidentalType = self.mode
             position += increment * 5.0
-            accidentalType = .SharpType
+            if self.mode == .FlatType {
+                position += increment
+                needsStave = evenOctave
+            } else {
+                needsStave = !evenOctave
+            }
         } else if octaveOffset == 11 {
             // B
+            needsStave = evenOctave
             position += increment * 6.0
         }
 
